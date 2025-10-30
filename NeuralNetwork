@@ -1,17 +1,3 @@
-# train_hazard_nn.py
-"""
-Train a multi-output neural network on hazard_dummy_data_v2.csv.
-
-If the CSV does not exist, it automatically generates it using generate_csv.py.
-
-Outputs:
- - models/fire_risk_regressor.h5
- - models/flood_risk_regressor.h5
- - models/hazard_classifier.h5
- - models/scaler_and_encoders.pkl
- - training_plot.png
-"""
-
 import os
 from pathlib import Path
 import pickle
@@ -29,9 +15,6 @@ import tensorflow as tf
 from tensorflow.keras import layers, Model, Input
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
-# -------------------------
-# Paths / config
-# -------------------------
 DATA_FILE = "hazard_dummy_data_v2.csv"
 MODELS_DIR = Path("models")
 MODELS_DIR.mkdir(exist_ok=True)
@@ -42,9 +25,6 @@ FLOOD_MODEL_PATH = MODELS_DIR / "flood_risk_regressor.h5"
 CLASS_MODEL_PATH = MODELS_DIR / "hazard_classifier.h5"
 PLOT_PATH = "training_plot.png"
 
-# -------------------------
-# Auto-generate CSV if missing
-# -------------------------
 if not Path(DATA_FILE).exists():
     print(f"{DATA_FILE} not found. Generating dataset using generate_csv.py ...")
     spec = importlib.util.spec_from_file_location("generate_csv", "generate_csv.py")
@@ -56,18 +36,11 @@ if not Path(DATA_FILE).exists():
 else:
     df = pd.read_csv(DATA_FILE)
 
-# -------------------------
-# Rest of your code remains unchanged
-# -------------------------
-# Quick check
 print("Loaded dataset:", DATA_FILE)
 print("Rows:", len(df))
 print("Columns:", df.columns.tolist())
 
 
-# -------------------------
-# Target selection
-# -------------------------
 # Regression targets: fire_risk_score, flood_risk_score (continuous)
 # Classification target: hazard_class (low/moderate/high)
 reg_targets = ["fire_risk_score", "flood_risk_score"]
@@ -76,9 +49,6 @@ class_target = "hazard_class"
 if not set(reg_targets + [class_target]).issubset(df.columns):
     raise ValueError("Required target columns missing from dataset.")
 
-# -------------------------
-# Feature engineering & selection
-# -------------------------
 # Drop columns that are unnecessary or identifiers
 drop_cols = ["town_name", "wind_direction"]  # we'll encode wind_direction, but keep in case - we will encode it
 # We'll use these features:
@@ -159,9 +129,6 @@ with open(SCALER_PATH, "wb") as f:
     }, f)
 print("Saved scaler and encoders to", SCALER_PATH)
 
-# -------------------------
-# Build model (multi-output)
-# -------------------------
 input_dim = X_train.shape[1]
 inputs = Input(shape=(input_dim,), name="inputs")
 
@@ -205,15 +172,10 @@ model.compile(
     }
 )
 
-# -------------------------
-# Callbacks
-# -------------------------
 early_stop = EarlyStopping(monitor="val_loss", patience=12, restore_best_weights=True)
 reduce_lr = ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=6, min_lr=1e-6)
 
-# -------------------------
 # Train
-# -------------------------
 history = model.fit(
     X_train,
     {"fire_risk": y_fire_train, "flood_risk": y_flood_train, "hazard_class": y_class_train},
@@ -224,9 +186,6 @@ history = model.fit(
     verbose=2
 )
 
-# -------------------------
-# Save whole model (multi-output)
-# -------------------------
 model.save(MODELS_DIR / "hazard_multioutput.h5")
 print("Saved multi-output model to models/hazard_multioutput.h5")
 
@@ -241,9 +200,6 @@ flood_model.save(FLOOD_MODEL_PATH)
 class_model.save(CLASS_MODEL_PATH)
 print("Saved individual models to:", FIRE_MODEL_PATH, FLOOD_MODEL_PATH, CLASS_MODEL_PATH)
 
-# -------------------------
-# Evaluate
-# -------------------------
 pred_fire_test, pred_flood_test, pred_class_test = model.predict(X_test)
 
 # Regression metrics
@@ -263,12 +219,9 @@ print("\n===== CLASSIFICATION METRICS =====")
 print("Accuracy:", acc)
 print(classification_report(y_class_test, pred_class_labels, target_names=label_enc.classes_))
 
-# -------------------------
-# Plot training curves (loss + accuracy)
-# -------------------------
 plt.figure(figsize=(12, 6))
 
-# 1️⃣ Total loss (always works)
+#Total loss
 loss = history.history['loss']
 val_loss = history.history['val_loss']
 epochs = range(1, len(loss) + 1)
@@ -280,7 +233,7 @@ plt.title('Total Loss')
 plt.xlabel('Epochs')
 plt.legend()
 
-# 2️⃣ Classification accuracy (multi-output safe)
+#Classification accuracy
 # TensorFlow may store as 'hazard_class_accuracy' or 'hazard_class_acc'
 possible_keys = ['hazard_class_accuracy', 'hazard_class_acc', 'val_hazard_class_accuracy', 'val_hazard_class_acc']
 
@@ -303,4 +256,5 @@ plt.legend()
 
 plt.tight_layout()
 plt.savefig(PLOT_PATH, dpi=150)
+
 print("Saved training plot to", PLOT_PATH)
