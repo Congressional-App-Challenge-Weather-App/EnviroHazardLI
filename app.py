@@ -4,12 +4,17 @@ import time
 import json
 import logging
 import requests
-import numpy as np
-import pandas as pd
-import pickle
 from datetime import datetime, timedelta
 from pathlib import Path
 from flask import Flask, render_template, request
+try:
+    import numpy as np
+    import pandas as pd
+    import pickle
+except ImportError:
+    np = None
+    pd = None
+    pickle = None
 
 # If TensorFlow is installed, we'll use it; if not, the app falls back to rules
 try:
