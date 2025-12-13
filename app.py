@@ -903,17 +903,13 @@ def index():
         fire_summary=fire_summary, flood_summary=flood_summary,
         activities=activities)
 
-if __name__ == "__main__":
+if __name__ != "__main__":
+    application = app
+else:
+    import os
+    port = int(os.environ.get("PORT", 5000))
     print("="*60)
     print("Starting EnviroHazardLI")
-    if MODEL_FILE.exists():
-        print("Model file found:", MODEL_FILE)
-    else:
-        print("Model file NOT found. App will use rule-based fallback")
-    if ENCODERS_FILE.exists():
-        print("Encoders found:", ENCODERS_FILE)
-    else:
-        print("Encoders NOT found. Preprocessing may fallback.")
-    print("Visit: http://localhost:5000")
+    print(f"Visit: http://localhost:{port}")
     print("="*60)
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=True, host="0.0.0.0", port=port)
